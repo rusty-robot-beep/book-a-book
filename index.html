@@ -25,6 +25,8 @@
     tr:last-child td { border-bottom: none; }
     .book-cover { width: 40px; height: 56px; object-fit: cover; border-radius: 3px; }
     .book-title { font-weight: 500; font-size: 0.95rem; }
+    .book-title a { color: inherit; text-decoration: none; }
+    .book-title a:hover { text-decoration: underline; }
     .book-author { font-size: 0.82rem; color: #666; margin-top: 2px; }
     .book-note { font-size: 0.82rem; color: #666; margin-top: 4px; font-style: italic; }
     .status-order { display: inline-block; background: #e6f4ea; color: #137333; padding: 4px 10px; border-radius: 12px; font-size: 0.82rem; font-weight: 500; text-decoration: none; }
@@ -62,7 +64,7 @@
     <div class="toolbar">
       <input type="text" id="url-input" placeholder="Paste book URL" />
       <button class="btn btn-add" onclick="addBook()">Add</button>
-      <button class="btn btn-check" onclick="checkAll()">Check availability</button>
+      <button class="btn btn-check" onclick="checkAll()">Check</button>
     </div>
   </header>
   <div class="error-banner" id="error-banner"></div>
@@ -221,7 +223,7 @@
         return `<tr>
           <td><img class="book-cover" src="${esc(book.cover_url)}" alt="" onerror="this.style.display='none'"></td>
           <td>
-            <div class="book-title">${esc(book.title)}</div>
+            <div class="book-title"><a href="${esc(book.url)}" target="_blank">${esc(book.title)}</a></div>
             <div class="book-author">${esc(book.author)}</div>
             ${note}
           </td>
