@@ -37,7 +37,22 @@ class Handler(BaseHTTPRequestHandler):
     def do_PATCH(self):
         path = urlparse(self.path).path
         parts = path.strip('/').split('/')
-        if len(parts) == 3 and parts[0] == 'books' and parts[2] == 'note':
+        if len(parts) == 2 and parts[0] == 'books':
+            book_id = parts[1]
+            length = int(self.headers.get('Content-Length', 0))
+            try:
+                body = json.loads(self.rfile.read(length))
+            except json.JSONDecodeError:
+                self._json(400, {'error': 'Invalid JSON'})
+                return
+            title = body.get('title', '').strip()
+            author = body.get('author', '').strip()
+            if not title:
+                self._json(400, {'error': 'Title cannot be empty'})
+                return
+            books = store.update_book(book_id, title, author)
+            self._json(200, books)
+        elif len(parts) == 3 and parts[0] == 'books' and parts[2] == 'note':
             book_id = parts[1]
             length = int(self.headers.get('Content-Length', 0))
             try:

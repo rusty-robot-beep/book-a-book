@@ -44,6 +44,11 @@
     .confirm-delete .no:hover { background: #f0f0f0; }
     .checking { opacity: 0.5; }
 
+    .modal label { display: block; font-size: 0.82rem; color: #666; margin-bottom: 4px; margin-top: 12px; }
+    .modal label:first-of-type { margin-top: 0; }
+    .modal input[type="text"] { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; font-size: 0.9rem; font-family: inherit; }
+    .modal input[type="text"]:focus { outline: none; border-color: #1a73e8; }
+
     /* Note modal */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
@@ -84,6 +89,21 @@
     </table>
   </main>
 
+  <!-- Edit book modal -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <h2>Edit book</h2>
+      <label for="edit-title">Title</label>
+      <input type="text" id="edit-title" />
+      <label for="edit-author">Author</label>
+      <input type="text" id="edit-author" />
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeEdit()">Cancel</button>
+        <button class="btn-save" onclick="saveEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Note modal -->
   <div class="modal-overlay" id="note-modal">
     <div class="modal">
@@ -100,6 +120,7 @@
     let books = [];
     let availability = {};
     let noteBookId = null;
+    let editBookId = null;
 
     async function loadBooks() {
       try {
@@ -172,6 +193,39 @@
       }
     }
 
+    function openEdit(id) {
+      const book = books.find(b => b.id === id);
+      editBookId = id;
+      document.getElementById('edit-title').value = book.title;
+      document.getElementById('edit-author').value = book.author;
+      document.getElementById('edit-modal').classList.add('open');
+      document.getElementById('edit-title').focus();
+    }
+
+    function closeEdit() {
+      editBookId = null;
+      document.getElementById('edit-modal').classList.remove('open');
+    }
+
+    async function saveEdit() {
+      const title = document.getElementById('edit-title').value.trim();
+      const author = document.getElementById('edit-author').value.trim();
+      if (!title) return;
+      try {
+        const res = await fetch(`/books/${editBookId}`, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({title, author})
+        });
+        if (!res.ok) { showError('Could not save changes'); return; }
+        books = await res.json();
+        closeEdit();
+        render();
+      } catch (e) {
+        showError('Could not reach server');
+      }
+    }
+
     function openNote(id) {
       const book = books.find(b => b.id === id);
       noteBookId = id;
@@ -231,6 +285,7 @@
           <td>${statusBadge(avail.zaspa, book.url)}</td>
           <td id="actions-${esc(book.id)}">
             <div class="actions">
+              <button class="btn-icon" onclick="openEdit('${esc(book.id)}')" title="Edit book">📝</button>
               <button class="btn-icon" onclick="openNote('${esc(book.id)}')" title="Add note">✏️</button>
               <a class="btn-icon" href="${esc(lubimyczytacUrl(book.title))}" target="_blank" title="Search on Lubimyczytać">📚</a>
               <button class="btn-icon delete" onclick="confirmDelete('${esc(book.id)}')" title="Delete">🗑️</button>
@@ -258,6 +313,10 @@
 
     document.getElementById('url-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') addBook();
+    });
+
+    document.getElementById('edit-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('edit-modal')) closeEdit();
     });
 
     document.getElementById('note-modal').addEventListener('click', e => {
