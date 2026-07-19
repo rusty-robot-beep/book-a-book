@@ -7,9 +7,9 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; }
-    header { background: #1a73e8; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+    header { background: #1a73e8; color: white; padding: 16px 24px; display: flex; align-items: center; }
     header h1 { font-size: 1.2rem; font-weight: 600; }
-    .toolbar { display: flex; gap: 8px; }
+    .toolbar { display: flex; gap: 16px; margin-left: auto; }
     .toolbar input { width: 420px; padding: 8px 12px; border: none; border-radius: 6px; font-size: 0.9rem; }
     .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 500; }
     .btn-add { background: white; color: #1a73e8; }
@@ -26,14 +26,34 @@
     .book-cover { width: 40px; height: 56px; object-fit: cover; border-radius: 3px; }
     .book-title { font-weight: 500; font-size: 0.95rem; }
     .book-author { font-size: 0.82rem; color: #666; margin-top: 2px; }
+    .book-note { font-size: 0.82rem; color: #666; margin-top: 4px; font-style: italic; }
     .status-order { display: inline-block; background: #e6f4ea; color: #137333; padding: 4px 10px; border-radius: 12px; font-size: 0.82rem; font-weight: 500; text-decoration: none; }
     .status-reserve { display: inline-block; background: #fce8e6; color: #c5221f; padding: 4px 10px; border-radius: 12px; font-size: 0.82rem; font-weight: 500; text-decoration: none; }
     .status-order:hover, .status-reserve:hover { opacity: 0.8; }
-    .btn-delete { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1.1rem; padding: 4px 8px; border-radius: 4px; }
-    .btn-delete:hover { color: #c5221f; background: #fce8e6; }
+    .actions { display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+    .btn-icon { background: none; border: none; color: #bbb; cursor: pointer; font-size: 1rem; padding: 4px 6px; border-radius: 4px; line-height: 1; }
+    .btn-icon:hover { color: #555; background: #f0f0f0; }
+    .btn-icon.delete:hover { color: #c5221f; background: #fce8e6; }
+    .confirm-delete { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #c5221f; }
+    .confirm-delete button { background: none; border: none; cursor: pointer; font-size: 0.82rem; font-weight: 500; padding: 2px 6px; border-radius: 4px; }
+    .confirm-delete .yes { color: #c5221f; }
+    .confirm-delete .no { color: #666; }
+    .confirm-delete .yes:hover { background: #fce8e6; }
+    .confirm-delete .no:hover { background: #f0f0f0; }
     .checking { opacity: 0.5; }
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: #1a73e8; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Note modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: white; border-radius: 10px; padding: 24px; width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .modal h2 { font-size: 1rem; font-weight: 600; margin-bottom: 12px; }
+    .modal textarea { width: 100%; height: 100px; border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; font-size: 0.9rem; font-family: inherit; resize: vertical; }
+    .modal textarea:focus { outline: none; border-color: #1a73e8; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+    .btn-save { background: #1a73e8; color: white; padding: 7px 16px; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 500; }
+    .btn-save:hover { background: #1557b0; }
+    .btn-cancel { background: none; color: #666; padding: 7px 16px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+    .btn-cancel:hover { background: #f5f5f5; }
   </style>
 </head>
 <body>
@@ -42,8 +62,8 @@
     <div class="toolbar">
       <input type="text" id="url-input" placeholder="Paste book URL" />
       <button class="btn btn-add" onclick="addBook()">Add</button>
+      <button class="btn btn-check" onclick="checkAll()">Check availability</button>
     </div>
-    <button class="btn btn-check" onclick="checkAll()">Check availability</button>
   </header>
   <div class="error-banner" id="error-banner"></div>
   <main>
@@ -62,14 +82,31 @@
     </table>
   </main>
 
+  <!-- Note modal -->
+  <div class="modal-overlay" id="note-modal">
+    <div class="modal">
+      <h2>Note</h2>
+      <textarea id="note-text" placeholder="Add a note…"></textarea>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeNote()">Cancel</button>
+        <button class="btn-save" onclick="saveNote()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let books = [];
     let availability = {};
+    let noteBookId = null;
 
     async function loadBooks() {
-      const res = await fetch('/books');
-      books = await res.json();
-      render();
+      try {
+        const res = await fetch('/books');
+        books = await res.json();
+        render();
+      } catch (e) {
+        showError('Could not reach server');
+      }
     }
 
     async function addBook() {
@@ -94,6 +131,14 @@
       } finally {
         input.disabled = false;
       }
+    }
+
+    function confirmDelete(id) {
+      const cell = document.getElementById('actions-' + id);
+      cell.innerHTML = `<div class="confirm-delete">Delete?
+        <button class="yes" onclick="removeBook('${esc(id)}')">Yes</button>
+        <button class="no" onclick="render()">No</button>
+      </div>`;
     }
 
     async function removeBook(id) {
@@ -125,6 +170,40 @@
       }
     }
 
+    function openNote(id) {
+      const book = books.find(b => b.id === id);
+      noteBookId = id;
+      document.getElementById('note-text').value = book.note || '';
+      document.getElementById('note-modal').classList.add('open');
+      document.getElementById('note-text').focus();
+    }
+
+    function closeNote() {
+      noteBookId = null;
+      document.getElementById('note-modal').classList.remove('open');
+    }
+
+    async function saveNote() {
+      const note = document.getElementById('note-text').value.trim();
+      try {
+        const res = await fetch(`/books/${noteBookId}/note`, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({note})
+        });
+        if (!res.ok) { showError('Could not save note'); return; }
+        books = await res.json();
+        closeNote();
+        render();
+      } catch (e) {
+        showError('Could not reach server');
+      }
+    }
+
+    function lubimyczytacUrl(title) {
+      return 'https://lubimyczytac.pl/szukaj/ksiazki?phrase=' + encodeURIComponent(title).replace(/%20/g, '+');
+    }
+
     function render() {
       const empty = document.getElementById('empty-msg');
       const table = document.getElementById('books-table');
@@ -138,15 +217,23 @@
       table.style.display = 'table';
       tbody.innerHTML = books.map(book => {
         const avail = availability[book.id] || {};
+        const note = book.note ? `<div class="book-note">${esc(book.note)}</div>` : '';
         return `<tr>
           <td><img class="book-cover" src="${esc(book.cover_url)}" alt="" onerror="this.style.display='none'"></td>
           <td>
             <div class="book-title">${esc(book.title)}</div>
             <div class="book-author">${esc(book.author)}</div>
+            ${note}
           </td>
           <td>${statusBadge(avail.manhattan, book.url)}</td>
           <td>${statusBadge(avail.zaspa, book.url)}</td>
-          <td><button class="btn-delete" onclick="removeBook('${esc(book.id)}')" title="Remove">×</button></td>
+          <td id="actions-${esc(book.id)}">
+            <div class="actions">
+              <button class="btn-icon" onclick="openNote('${esc(book.id)}')" title="Add note">✏️</button>
+              <a class="btn-icon" href="${esc(lubimyczytacUrl(book.title))}" target="_blank" title="Search on Lubimyczytać">📚</a>
+              <button class="btn-icon delete" onclick="confirmDelete('${esc(book.id)}')" title="Delete">🗑️</button>
+            </div>
+          </td>
         </tr>`;
       }).join('');
     }
@@ -164,11 +251,19 @@
     }
 
     function esc(str) {
-      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     document.getElementById('url-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') addBook();
+    });
+
+    document.getElementById('note-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('note-modal')) closeNote();
+    });
+
+    document.getElementById('note-text').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.metaKey) saveNote();
     });
 
     loadBooks();

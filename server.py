@@ -34,6 +34,22 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._json(404, {'error': 'Not found'})
 
+    def do_PATCH(self):
+        path = urlparse(self.path).path
+        parts = path.strip('/').split('/')
+        if len(parts) == 3 and parts[0] == 'books' and parts[2] == 'note':
+            book_id = parts[1]
+            length = int(self.headers.get('Content-Length', 0))
+            try:
+                body = json.loads(self.rfile.read(length))
+            except json.JSONDecodeError:
+                self._json(400, {'error': 'Invalid JSON'})
+                return
+            books = store.update_note(book_id, body.get('note', ''))
+            self._json(200, books)
+        else:
+            self._json(404, {'error': 'Not found'})
+
     def do_DELETE(self):
         path = urlparse(self.path).path
         if path.startswith('/books/'):
