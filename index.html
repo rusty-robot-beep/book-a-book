@@ -97,10 +97,15 @@
     }
 
     async function removeBook(id) {
-      const res = await fetch(`/books/${id}`, {method: 'DELETE'});
-      books = await res.json();
-      delete availability[id];
-      render();
+      try {
+        const res = await fetch(`/books/${id}`, {method: 'DELETE'});
+        if (!res.ok) { showError('Could not remove book'); return; }
+        books = await res.json();
+        delete availability[id];
+        render();
+      } catch (e) {
+        showError('Could not reach server');
+      }
     }
 
     async function checkAll() {
@@ -141,14 +146,14 @@
           </td>
           <td>${statusBadge(avail.manhattan, book.url)}</td>
           <td>${statusBadge(avail.zaspa, book.url)}</td>
-          <td><button class="btn-delete" onclick="removeBook('${book.id}')" title="Remove">×</button></td>
+          <td><button class="btn-delete" onclick="removeBook('${esc(book.id)}')" title="Remove">×</button></td>
         </tr>`;
       }).join('');
     }
 
     function statusBadge(status, url) {
-      if (status === 'Order') return `<a class="status-order" href="${url}" target="_blank">Order</a>`;
-      if (status === 'Reserve') return `<a class="status-reserve" href="${url}" target="_blank">Reserve</a>`;
+      if (status === 'Order') return `<a class="status-order" href="${esc(url)}" target="_blank">Order</a>`;
+      if (status === 'Reserve') return `<a class="status-reserve" href="${esc(url)}" target="_blank">Reserve</a>`;
       return '';
     }
 
