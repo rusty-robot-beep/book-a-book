@@ -139,7 +139,7 @@
       tbody.innerHTML = books.map(book => {
         const avail = availability[book.id] || {};
         return `<tr>
-          <td><img class="book-cover" src="${book.cover_url}" alt="" onerror="this.style.display='none'"></td>
+          <td><img class="book-cover" src="${esc(book.cover_url)}" alt="" onerror="this.style.display='none'"></td>
           <td>
             <div class="book-title">${esc(book.title)}</div>
             <div class="book-author">${esc(book.author)}</div>

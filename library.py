@@ -19,8 +19,9 @@ def fetch_book_metadata(book_id):
     doc = _get_json(f"/api/document/{book_id}")
     if not doc.get('imageLst'):
         raise ValueError(f"Book {book_id} has no image — may not exist")
-    title = _parse_title(doc['fieldLst'])
-    author = _parse_author(doc['fieldLst'])
+    field_lst = doc.get('fieldLst', [])
+    title = _parse_title(field_lst)
+    author = _parse_author(field_lst)
     cover_url = BASE_URL + doc['imageLst'][0]['urlMin']
     return {
         "id": str(book_id),

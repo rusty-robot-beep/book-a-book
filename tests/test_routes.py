@@ -18,13 +18,6 @@ SAMPLE_BOOK = {
 }
 
 
-def start_test_server():
-    httpd = HTTPServer(('localhost', 0), server.Handler)
-    port = httpd.server_address[1]
-    t = threading.Thread(target=httpd.handle_request)
-    t.daemon = True
-    return httpd, port
-
 
 class TestRoutes(unittest.TestCase):
     def _request(self, method, path, body=None, port=None):
@@ -95,6 +88,20 @@ class TestRoutes(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertEqual(data[0]['manhattan'], 'Order')
             self.assertEqual(data[0]['zaspa'], 'Reserve')
+            httpd.server_close()
+
+    def test_delete_book_removes_it(self):
+        with unittest.mock.patch('server.store') as mock_store:
+            mock_store.remove_book.return_value = []
+            httpd = HTTPServer(('localhost', 0), server.Handler)
+            port = httpd.server_address[1]
+            t = threading.Thread(target=httpd.handle_request)
+            t.daemon = True
+            t.start()
+            status, data = self._request('DELETE', '/books/572329', port=port)
+            self.assertEqual(status, 200)
+            self.assertEqual(data, [])
+            mock_store.remove_book.assert_called_once_with('572329')
             httpd.server_close()
 
 

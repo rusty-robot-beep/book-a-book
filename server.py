@@ -45,14 +45,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def _handle_add_book(self):
         length = int(self.headers.get('Content-Length', 0))
-        body = json.loads(self.rfile.read(length))
+        try:
+            body = json.loads(self.rfile.read(length))
+        except json.JSONDecodeError:
+            self._json(400, {'error': 'Invalid JSON'})
+            return
         url = body.get('url', '').strip()
         try:
             book_id = library.extract_book_id(url)
             book = library.fetch_book_metadata(book_id)
             books = store.add_book(book)
             self._json(200, books)
-        except ValueError as e:
+        except (ValueError, KeyError) as e:
             self._json(400, {'error': str(e)})
 
     def _handle_check(self):
