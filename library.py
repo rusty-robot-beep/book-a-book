@@ -33,7 +33,9 @@ def fetch_book_metadata(book_id):
 
 
 def fetch_availability(book_id):
-    holdings = _get_json(f"/api/holding/{book_id}")
+    response = _get_json(f"/api/holding/{book_id}")
+    # API may return the array directly or wrapped in {"success": true, "data": [...]}
+    holdings = response.get('data', response) if isinstance(response, dict) else response
     return {
         "manhattan": _branch_status(holdings, MANHATTAN_CODE),
         "zaspa": _branch_status(holdings, ZASPA_CODE),
