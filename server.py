@@ -50,17 +50,8 @@ class Handler(BaseHTTPRequestHandler):
             if not title:
                 self._json(400, {'error': 'Title cannot be empty'})
                 return
-            books = store.update_book(book_id, title, author)
-            self._json(200, books)
-        elif len(parts) == 3 and parts[0] == 'books' and parts[2] == 'note':
-            book_id = parts[1]
-            length = int(self.headers.get('Content-Length', 0))
-            try:
-                body = json.loads(self.rfile.read(length))
-            except json.JSONDecodeError:
-                self._json(400, {'error': 'Invalid JSON'})
-                return
-            books = store.update_note(book_id, body.get('note', ''))
+            note = body.get('note', '')
+            books = store.update_book(book_id, title, author, note)
             self._json(200, books)
         else:
             self._json(404, {'error': 'Not found'})

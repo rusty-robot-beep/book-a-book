@@ -37,21 +37,12 @@ def remove_book(book_id):
     return books
 
 
-def update_book(book_id, title, author):
+def update_book(book_id, title, author, note):
     books = load_books()
     for book in books:
         if book['id'] == book_id:
             book['title'] = title
             book['author'] = author
-            break
-    save_books(books)
-    return books
-
-
-def update_note(book_id, note):
-    books = load_books()
-    for book in books:
-        if book['id'] == book_id:
             book['note'] = note
             break
     save_books(books)
