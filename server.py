@@ -24,6 +24,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, store.load_books())
         elif path == '/check':
             self._handle_check()
+        elif path == '/icon.png':
+            self._serve_file('icon.png', 'image/png')
         elif path.startswith('/cover/'):
             self._proxy_cover(path[len('/cover/'):])
         else:
@@ -93,6 +95,20 @@ class Handler(BaseHTTPRequestHandler):
                 avail = {'manhattan': '', 'zaspa': ''}
             results.append({'id': book['id'], **avail})
         self._json(200, results)
+
+    def _serve_file(self, filename, content_type):
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        try:
+            with open(path, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except FileNotFoundError:
+            self.send_response(404)
+            self.end_headers()
 
     def _proxy_cover(self, image_path):
         import urllib.request
