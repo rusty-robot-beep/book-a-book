@@ -22,7 +22,10 @@ def fetch_book_metadata(book_id):
     field_lst = doc.get('fieldLst', [])
     title = _parse_title(field_lst)
     author = _parse_author(field_lst)
-    cover_url = BASE_URL + doc['imageLst'][0]['urlMin']
+    image_path = doc['imageLst'][0]['urlMin'].lstrip('/')
+    # Strip the /api/image/ prefix so we can proxy via /cover/<filename>
+    image_file = image_path.split('/')[-1]
+    cover_url = f"/cover/{image_file}"
     return {
         "id": str(book_id),
         "url": f"{BASE_URL}/document/{book_id}",

@@ -24,6 +24,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, store.load_books())
         elif path == '/check':
             self._handle_check()
+        elif path.startswith('/cover/'):
+            self._proxy_cover(path[len('/cover/'):])
         else:
             self._json(404, {'error': 'Not found'})
 
@@ -91,6 +93,22 @@ class Handler(BaseHTTPRequestHandler):
                 avail = {'manhattan': '', 'zaspa': ''}
             results.append({'id': book['id'], **avail})
         self._json(200, results)
+
+    def _proxy_cover(self, image_path):
+        import urllib.request
+        url = f"https://katalog.wbpg.org.pl/api/image/{image_path}"
+        try:
+            with urllib.request.urlopen(url, timeout=10) as resp:
+                data = resp.read()
+                content_type = resp.headers.get('Content-Type', 'image/jpeg')
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception:
+            self.send_response(404)
+            self.end_headers()
 
     def _serve_html(self):
         try:
